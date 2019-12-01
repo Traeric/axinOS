@@ -1,24 +1,26 @@
+/* FIFOライブラリ */
+
 #include "bootpack.h"
 
 #define FLAGS_OVERRUN		0x0001
 
-/* 初始化FIFO?冲区 */
-void fifo8_init(struct FIFO8 *fifo, int size, unsigned char *buf)
+void fifo32_init(struct FIFO32 *fifo, int size, int *buf)
+/* FIFOバッファの初期化 */
 {
 	fifo->size = size;
 	fifo->buf = buf;
-	fifo->free = size; /* ?冲区大小 */
+	fifo->free = size; /* 空き */
 	fifo->flags = 0;
-	fifo->p = 0; /* 下一个数据写入位置 */
-	fifo->q = 0; /* 下一个数据?出位置 */
+	fifo->p = 0; /* 書き込み位置 */
+	fifo->q = 0; /* 読み込み位置 */
 	return;
 }
 
-/* 向FIFO?冲区?送数据并保存 */
-int fifo8_put(struct FIFO8 *fifo, unsigned char data)
+int fifo32_put(struct FIFO32 *fifo, int data)
+/* FIFOへデータを送り込んで蓄える */
 {
 	if (fifo->free == 0) {
-		/* 空余没有了 溢出 */
+		/* 空きがなくてあふれた */
 		fifo->flags |= FLAGS_OVERRUN;
 		return -1;
 	}
@@ -31,12 +33,12 @@ int fifo8_put(struct FIFO8 *fifo, unsigned char data)
 	return 0;
 }
 
-/* 从FIFO取得一个数据 */
-int fifo8_get(struct FIFO8 *fifo)
+int fifo32_get(struct FIFO32 *fifo)
+/* FIFOからデータを一つとってくる */
 {
 	int data;
 	if (fifo->free == fifo->size) {
-		/* 如果?冲区?空 返回-1 */
+		/* バッファが空っぽのときは、とりあえず-1が返される */
 		return -1;
 	}
 	data = fifo->buf[fifo->q];
@@ -48,8 +50,8 @@ int fifo8_get(struct FIFO8 *fifo)
 	return data;
 }
 
-/* ?取已?存入的数据条数 */
-int fifo8_status(struct FIFO8 *fifo)
+int fifo32_status(struct FIFO32 *fifo)
+/* どのくらいデータが溜まっているかを報告する */
 {
 	return fifo->size - fifo->free;
 }

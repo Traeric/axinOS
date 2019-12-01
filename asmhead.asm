@@ -1,5 +1,8 @@
 ; haribote-os boot asm
 ; TAB=4
+[INSTRSET "i486p"]
+
+VBEMODE	EQU		0x105			; 1024 x  768 x 8bit
 
 BOTPAK	EQU		0x00280000		; bootpackのロード先
 DSKCAC	EQU		0x00100000		; ディスクキャッシュの場所
@@ -16,7 +19,53 @@ VRAM	EQU		0x0ff8			; 图像缓冲区的开始地址
 		ORG		0xc200			; 这个程序将要被装载到内存的地方
 
 ; 画面的设定
+; 确定VUE是否存在
+		MOV		AX,0x9000
+		MOV		ES,AX
+		MOV		DI,0
+		MOV		AX,0x4f00
+		INT		0x10
+		CMP		AX,0x004f
+		JNE		scrn320
 
+; 检查VBE的版本是否在2以上
+
+		MOV		AX,[ES:DI+4]
+		CMP		AX,0x0200
+		JB		scrn320			; if (AX < 0x0200) goto scrn320
+
+; 查看画面模式0x105是否能够使用
+
+		MOV		CX,VBEMODE
+		MOV		AX,0x4f01
+		INT		0x10
+		CMP		AX,0x004f
+		JNE		scrn320
+
+; 画面模式信息的确认
+		CMP		BYTE [ES:DI+0x19],8
+		JNE		scrn320
+		CMP		BYTE [ES:DI+0x1b],4
+		JNE		scrn320
+		MOV		AX,[ES:DI+0x00]
+		AND		AX,0x0080
+		JZ		scrn320			; 模式属性的bit是0 所以放弃
+
+; 画面模式切换
+
+		MOV		BX,VBEMODE+0x4000
+		MOV		AX,0x4f02
+		INT		0x10
+		MOV		BYTE [VMODE],8	; VBE显卡 640 x 480 x 8位彩色
+		MOV		AX,[ES:DI+0x12]
+		MOV		[SCRNX],AX
+		MOV		AX,[ES:DI+0x14]
+		MOV		[SCRNY],AX
+		MOV		EAX,[ES:DI+0x28]
+		MOV		[VRAM],EAX
+		JMP		keystatus
+
+scrn320:
 		MOV		AL,0x13			; VGA显卡 320 x 200 x 8位彩色
 		MOV		AH,0x00
 		INT		0x10
@@ -26,7 +75,7 @@ VRAM	EQU		0x0ff8			; 图像缓冲区的开始地址
 		MOV		DWORD [VRAM],0x000a0000
 
 ; 用bios获取键盘上各种指示灯的状态
-
+keystatus:
 		MOV		AH,0x02
 		INT		0x16 			; keyboard BIOS
 		MOV		[LEDS],AL

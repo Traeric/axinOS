@@ -1,19 +1,16 @@
+/* ƒL[ƒ{[ƒhŠÖŒW */
+
 #include "bootpack.h"
 
-// å¤„ç†é”®ç›˜ä¸­æ–­
-struct FIFO8 keyfifo;
+struct FIFO32 *keyfifo;
+int keydata0;
 
 void inthandler21(int *esp)
 {
-	unsigned char data;
-	/* é€šçŸ¥pic "IRQ-01å·²ç»å—ç†å®Œæ¯•" */
-	/* ä¹Ÿå°±æ˜¯è¯´å‘Šè¯‰picå·²ç»å¤„ç†å®Œäº†è¿™ä¸ªä¸­æ–­ ç»§ç»­ç›‘å¬é”®ç›˜çš„ä¸­æ–­ */
-	/* å¦åˆ™cpuå°±ä¸ä¼šç›‘è§†è¿™ä¸ªä¸­æ–­äº† ä¸‹æ¬¡å†æŒ‰é”®ç›˜å°±æ²¡æœ‰ç”¨äº† */
-	io_out8(PIC0_OCW2, 0x61);	
+	int data;
+	io_out8(PIC0_OCW2, 0x61);	/* IRQ-01ó•tŠ®—¹‚ğPIC‚É’Ê’m */
 	data = io_in8(PORT_KEYDAT);
-	
-	// ä¸ºäº†åŠ å¿«ä¸­æ–­æ‰§è¡Œ è¿™é‡Œä¸å¤„ç†ä¿¡æ¯ è€Œæ˜¯å°†æ•°æ®æš‚æ—¶ä¿å­˜åˆ°ç¼“å†²åŒºä¸­ 
-	fifo8_put(&keyfifo, data);
+	fifo32_put(keyfifo, data + keydata0);
 	return;
 }
 
@@ -24,7 +21,7 @@ void inthandler21(int *esp)
 
 void wait_KBC_sendready(void)
 {
-	/* ç­‰å¾…é”®ç›˜æ§åˆ¶ç”µè·¯å‡†å¤‡å®Œæ¯• */
+	/* ƒL[ƒ{[ƒhƒRƒ“ƒgƒ[ƒ‰‚ªƒf[ƒ^‘—M‰Â”\‚É‚È‚é‚Ì‚ğ‘Ò‚Â */
 	for (;;) {
 		if ((io_in8(PORT_KEYSTA) & KEYSTA_SEND_NOTREADY) == 0) {
 			break;
@@ -33,13 +30,15 @@ void wait_KBC_sendready(void)
 	return;
 }
 
-void init_keyboard(void)
+void init_keyboard(struct FIFO32 *fifo, int data0)
 {
-	/* åˆå§‹åŒ–é”®ç›˜æ§åˆ¶ç”µè·¯ */
+	/* ‘‚«‚İæ‚ÌFIFOƒoƒbƒtƒ@‚ğ‹L‰¯ */
+	keyfifo = fifo;
+	keydata0 = data0;
+	/* ƒL[ƒ{[ƒhƒRƒ“ƒgƒ[ƒ‰‚Ì‰Šú‰» */
 	wait_KBC_sendready();
 	io_out8(PORT_KEYCMD, KEYCMD_WRITE_MODE);
 	wait_KBC_sendready();
 	io_out8(PORT_KEYDAT, KBC_MODE);
 	return;
 }
-

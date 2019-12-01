@@ -17,6 +17,8 @@
 	GLOBAL	_io_load_eflags, _io_store_eflags
 	GLOBAL	_load_gdtr, _load_idtr
 	GLOBAL	_load_cr0, _store_cr0
+	GLOBAL	_load_tr
+	GLOBAL	_farjmp
 	GLOBAL	_memtest_sub
 	GLOBAL	_asm_inthandler20, _asm_inthandler21
 	GLOBAL	_asm_inthandler27, _asm_inthandler2c
@@ -217,3 +219,16 @@ mts_fin:
 	POP		ESI
 	POP		EDI
 	RET
+	
+; 切换到指定的任务 JMP跳到GDT中指定的任务编号段地址
+_farjmp:		; void farjmp(int eip, int cs);
+	JMP		FAR	[ESP+4]				; eip, cs
+	RET
+
+; 向TR寄存器中写入值 TR寄存其中保存的是当前的任务在GDT中的编号 用于切换多任务使用
+_load_tr:		; void load_tr(int tr);
+	LTR		[ESP+4]			; tr
+	RET
+
+
+
