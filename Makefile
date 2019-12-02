@@ -51,6 +51,8 @@ axinos.img : ipl10.bin axinos.sys Makefile
 	$(EDIMG)   imgin:../z_tools/fdimg0at.tek \
 		wbinimg src:ipl10.bin len:512 from:0 to:0 \
 		copy from:axinos.sys to:@: \
+		copy from:ipl10.asm to:@: \
+		copy from:make.bat to:@: \
 		imgout:axinos.img
 
 # ˆê”Ê‹K‘¥
