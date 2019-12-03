@@ -18,13 +18,16 @@
 	GLOBAL	_load_gdtr, _load_idtr
 	GLOBAL	_load_cr0, _store_cr0
 	GLOBAL	_load_tr
-	GLOBAL	_farjmp
+	GLOBAL	_farjmp, _farcall
 	GLOBAL	_memtest_sub
 	GLOBAL	_asm_inthandler20, _asm_inthandler21
 	GLOBAL	_asm_inthandler27, _asm_inthandler2c
+	GLOBAL	_asm_hrb_api
 	; 这是在int.c中定义的鼠标键盘中断程序
 	EXTERN	_inthandler20, _inthandler21
 	EXTERN	_inthandler27, _inthandler2c
+	EXTERN	_cons_putchar
+	EXTERN	_hrb_api
 
 
 ; 实际的函数
@@ -225,10 +228,22 @@ _farjmp:		; void farjmp(int eip, int cs);
 	JMP		FAR	[ESP+4]				; eip, cs
 	RET
 
+_farcall:		; void farcall(int eip, int cs);
+	CALL	FAR	[ESP+4]				; eip, cs
+	RET
+
+
 ; 向TR寄存器中写入值 TR寄存其中保存的是当前的任务在GDT中的编号 用于切换多任务使用
 _load_tr:		; void load_tr(int tr);
 	LTR		[ESP+4]			; tr
 	RET
 
-
+_asm_hrb_api:
+		STI
+		PUSHAD	; 保存寄存器的值
+		PUSHAD	; 用于向hrb_api传值  因为栈中的数据弹出去就没没了 因此需要存两边
+		CALL	_hrb_api
+		ADD		ESP,32
+		POPAD
+		IRETD
 

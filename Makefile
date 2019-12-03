@@ -46,19 +46,19 @@ bootpack.bim : $(OBJS_BOOTPACK) Makefile
 bootpack.hrb : bootpack.bim Makefile
 	$(BIM2HRB) bootpack.bim bootpack.hrb 0
 
-hlt.xin : hlt.asm Makefile
-	$(NASK) hlt.asm hlt.xin hlt.lst
+hlt.hrb : hlt.nas Makefile
+	$(NASK) hlt.nas hlt.hrb hlt.lst
 
 axinos.sys : asmhead.bin bootpack.hrb Makefile
 	copy /B asmhead.bin+bootpack.hrb axinos.sys
 
-axinos.img : ipl10.bin axinos.sys hlt.xin Makefile
+axinos.img : ipl10.bin axinos.sys hlt.hrb Makefile
 	$(EDIMG)   imgin:../z_tools/fdimg0at.tek \
 		wbinimg src:ipl10.bin len:512 from:0 to:0 \
 		copy from:axinos.sys to:@: \
 		copy from:ipl10.asm to:@: \
 		copy from:make.bat to:@: \
-		copy from:hlt.xin to:@: \
+		copy from:hlt.hrb to:@: \
 		imgout:axinos.img
 
 # ˆê”Ê‹K‘¥
@@ -93,7 +93,7 @@ clean :
 	-$(DEL) bootpack.map
 	-$(DEL) bootpack.bim
 	-$(DEL) bootpack.hrb
-	-$(DEL) *.xin
+	-$(DEL) *.hrb
 	-$(DEL) axinos.sys
 
 src_only :
