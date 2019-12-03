@@ -11,22 +11,22 @@
 [FILE "naskfunc.nas"]			; 源文件名信息
 
 	; 程序中包含的函数名
-	GLOBAL	_io_hlt, _write_mem8, _io_cli, _io_sti, _io_stihlt
-	GLOBAL	_io_in8, _io_in16, _io_in32
+	GLOBAL	_io_hlt, _io_cli, _io_sti, _io_stihlt
+	GLOBAL	_io_in8,  _io_in16,  _io_in32
 	GLOBAL	_io_out8, _io_out16, _io_out32
 	GLOBAL	_io_load_eflags, _io_store_eflags
 	GLOBAL	_load_gdtr, _load_idtr
 	GLOBAL	_load_cr0, _store_cr0
 	GLOBAL	_load_tr
-	GLOBAL	_farjmp, _farcall
-	GLOBAL	_memtest_sub
 	GLOBAL	_asm_inthandler20, _asm_inthandler21
 	GLOBAL	_asm_inthandler27, _asm_inthandler2c
-	GLOBAL	_asm_hrb_api
-	; 这是在int.c中定义的鼠标键盘中断程序
+	GLOBAL	_asm_inthandler0c, _asm_inthandler0d
+	GLOBAL	_asm_end_app, _memtest_sub
+	GLOBAL	_farjmp, _farcall
+	GLOBAL	_asm_hrb_api, _start_app
 	EXTERN	_inthandler20, _inthandler21
 	EXTERN	_inthandler27, _inthandler2c
-	EXTERN	_cons_putchar
+	EXTERN	_inthandler0c, _inthandler0d
 	EXTERN	_hrb_api
 
 
@@ -181,6 +181,46 @@ _asm_inthandler2c:
 	POP		ES
 	IRETD
 
+_asm_inthandler0c:
+	STI
+	PUSH	ES
+	PUSH	DS
+	PUSHAD
+	MOV		EAX,ESP
+	PUSH	EAX
+	MOV		AX,SS
+	MOV		DS,AX
+	MOV		ES,AX
+	CALL	_inthandler0c
+	CMP		EAX,0
+	JNE		asm_end_app
+	POP		EAX
+	POPAD
+	POP		DS
+	POP		ES
+	ADD		ESP,4
+	IRETD
+
+_asm_inthandler0d:
+		STI
+		PUSH	ES
+		PUSH	DS
+		PUSHAD
+		MOV		EAX,ESP
+		PUSH	EAX
+		MOV		AX,SS
+		MOV		DS,AX
+		MOV		ES,AX
+		CALL	_inthandler0d
+		CMP		EAX,0		; ここだけ違う
+		JNE		asm_end_app		; ここだけ違う
+		POP		EAX
+		POPAD
+		POP		DS
+		POP		ES
+		ADD		ESP,4			; INT 0x0d では、これが必要
+		IRETD
+
 _load_cr0:		; int load_cr0(void);
 	MOV		EAX,CR0
 	RET
@@ -238,12 +278,50 @@ _load_tr:		; void load_tr(int tr);
 	LTR		[ESP+4]			; tr
 	RET
 
+
 _asm_hrb_api:
 		STI
-		PUSHAD	; 保存寄存器的值
-		PUSHAD	; 用于向hrb_api传值  因为栈中的数据弹出去就没没了 因此需要存两边
+		PUSH	DS
+		PUSH	ES
+		PUSHAD		; 保存寄存器的值
+		PUSHAD		; 用于向hrb_api传值  因为栈中的数据弹出去就没没了 因此需要存两遍
+		MOV		AX,SS
+		MOV		DS,AX		; OS用のセグメントをDSとESにも入れる
+		MOV		ES,AX
 		CALL	_hrb_api
+		CMP		EAX,0		; EAXが0でなければアプリ終了処理
+		JNE		asm_end_app
 		ADD		ESP,32
 		POPAD
+		POP		ES
+		POP		DS
 		IRETD
+_asm_end_app:
+;	EAX为tss.esp0的地址
+		MOV		ESP,[EAX]
+		MOV		DWORD [EAX+4],0
+		POPAD
+		RET					; 返回cmd_app
 
+_start_app:		; void start_app(int eip, int cs, int esp, int ds, int *tss_esp0);
+		PUSHAD		; 32ビットレジスタを全部保存しておく
+		MOV		EAX,[ESP+36]	; アプリ用のEIP
+		MOV		ECX,[ESP+40]	; アプリ用のCS
+		MOV		EDX,[ESP+44]	; アプリ用のESP
+		MOV		EBX,[ESP+48]	; アプリ用のDS/SS
+		MOV		EBP,[ESP+52]	; tss.esp0の番地
+		MOV		[EBP  ],ESP		; OS用のESPを保存
+		MOV		[EBP+4],SS		; OS用のSSを保存
+		MOV		ES,BX
+		MOV		DS,BX
+		MOV		FS,BX
+		MOV		GS,BX
+;	以下はRETFでアプリに行かせるためのスタック調整
+		OR		ECX,3			; アプリ用のセグメント番号に3をORする
+		OR		EBX,3			; アプリ用のセグメント番号に3をORする
+		PUSH	EBX				; アプリのSS
+		PUSH	EDX				; アプリのESP
+		PUSH	ECX				; アプリのCS
+		PUSH	EAX				; アプリのEIP
+		RETF
+;	アプリが終了してもここには来ない
