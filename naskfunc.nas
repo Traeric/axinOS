@@ -193,7 +193,7 @@ _asm_inthandler0c:
 	MOV		ES,AX
 	CALL	_inthandler0c
 	CMP		EAX,0
-	JNE		asm_end_app
+	JNE		_asm_end_app
 	POP		EAX
 	POPAD
 	POP		DS
@@ -213,7 +213,7 @@ _asm_inthandler0d:
 		MOV		ES,AX
 		CALL	_inthandler0d
 		CMP		EAX,0		; ここだけ違う
-		JNE		asm_end_app		; ここだけ違う
+		JNE		_asm_end_app		; ここだけ違う
 		POP		EAX
 		POPAD
 		POP		DS
@@ -290,7 +290,7 @@ _asm_hrb_api:
 		MOV		ES,AX
 		CALL	_hrb_api
 		CMP		EAX,0		; EAXが0でなければアプリ終了処理
-		JNE		asm_end_app
+		JNE		_asm_end_app
 		ADD		ESP,32
 		POPAD
 		POP		ES
