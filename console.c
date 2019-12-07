@@ -308,6 +308,7 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
 					sheet_free(sht);	/* 閉じる */
 				}
 			}
+			timer_cancelall(&task->fifo);
 			memman_free_4k(memman, (int) q, segsiz);
 		} else {
 			cons_putstr0(cons, ".hrb file format error.\n");
@@ -414,11 +415,20 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 			if (i == 3) {	/* カーソルOFF */
 				cons->cur_c = -1;
 			}
-			if (256 <= i && i <= 511) { /* キーボードデータ（タスクA経由） */
+			if (i >= 256) { /* キーボードデータ（タスクA経由）など */
 				reg[7] = i - 256;
 				return 0;
 			}
 		}
+	} else if (edx == 16) {
+		reg[7] = (int) timer_alloc();
+		((struct TIMER *) reg[7])->flags2 = 1;	/* 自動キャンセル有効 */
+	} else if (edx == 17) {
+		timer_init((struct TIMER *) ebx, &task->fifo, eax + 256);
+	} else if (edx == 18) {
+		timer_settime((struct TIMER *) ebx, eax);
+	} else if (edx == 19) {
+		timer_free((struct TIMER *) ebx);
 	}
 	return 0;
 }
