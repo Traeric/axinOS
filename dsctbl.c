@@ -1,17 +1,14 @@
+/* GDT��IDT�Ȃǂ́A descriptor table �֌W */
+
 #include "bootpack.h"
 
-/*
- * ?个方法是从内存的ADR_GDT地址?始写入64kb?于GDT的信息
- * 然后在cpu中的LGDT寄存器(48位)中写入?64kb内容在内存上的信息
- * ??cpu就可以通??64kb信息控制4GB的内存
- */
 void init_gdtidt(void)
 {
 	struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *) ADR_GDT;
 	struct GATE_DESCRIPTOR    *idt = (struct GATE_DESCRIPTOR    *) ADR_IDT;
 	int i;
 
-	/* GDT初始化 */
+	/* GDT�̏����� */
 	for (i = 0; i <= LIMIT_GDT / 8; i++) {
 		set_segmdesc(gdt + i, 0, 0, 0);
 	}
@@ -19,19 +16,17 @@ void init_gdtidt(void)
 	set_segmdesc(gdt + 2, LIMIT_BOTPAK, ADR_BOTPAK, AR_CODE32_ER);
 	load_gdtr(LIMIT_GDT, ADR_GDT);
 
-	/* IDT初始化 */
+	/* IDT�̏����� */
 	for (i = 0; i <= LIMIT_IDT / 8; i++) {
 		set_gatedesc(idt + i, 0, 0, 0);
 	}
 	load_idtr(LIMIT_IDT, ADR_IDT);
-	
-	/* 终端函数注册 这里注册了IRQ1 7 12的中断函数 */
-	// 注册中断函数
+
+	/* IDT�̐ݒ� */
 	set_gatedesc(idt + 0x0c, (int) asm_inthandler0c, 2 * 8, AR_INTGATE32);
 	set_gatedesc(idt + 0x0d, (int) asm_inthandler0d, 2 * 8, AR_INTGATE32);
 	set_gatedesc(idt + 0x20, (int) asm_inthandler20, 2 * 8, AR_INTGATE32);
 	set_gatedesc(idt + 0x21, (int) asm_inthandler21, 2 * 8, AR_INTGATE32);
-	set_gatedesc(idt + 0x27, (int) asm_inthandler27, 2 * 8, AR_INTGATE32);
 	set_gatedesc(idt + 0x2c, (int) asm_inthandler2c, 2 * 8, AR_INTGATE32);
 	set_gatedesc(idt + 0x40, (int) asm_hrb_api,      2 * 8, AR_INTGATE32 + 0x60);
 
@@ -62,4 +57,3 @@ void set_gatedesc(struct GATE_DESCRIPTOR *gd, int offset, int selector, int ar)
 	gd->offset_high  = (offset >> 16) & 0xffff;
 	return;
 }
-
